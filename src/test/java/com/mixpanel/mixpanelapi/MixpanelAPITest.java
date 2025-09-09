@@ -700,4 +700,71 @@ public class MixpanelAPITest extends TestCase
         }
     }
 
+    public void testGzipConstructors() {
+        // Test default constructor (no gzip)
+        MixpanelAPI api1 = new MixpanelAPI();
+        assertFalse("Default constructor should not use gzip", api1.mUseGzip);
+
+        // Test constructor with gzip parameter
+        MixpanelAPI api2 = new MixpanelAPI(true);
+        assertTrue("Constructor with gzip=true should use gzip", api2.mUseGzip);
+
+        MixpanelAPI api3 = new MixpanelAPI(false);
+        assertFalse("Constructor with gzip=false should not use gzip", api3.mUseGzip);
+
+        // Test constructor with custom endpoints and gzip
+        MixpanelAPI api4 = new MixpanelAPI("events", "people", true);
+        assertTrue("Constructor with custom endpoints and gzip=true should use gzip", api4.mUseGzip);
+
+        MixpanelAPI api5 = new MixpanelAPI("events", "people", false);
+        assertFalse("Constructor with custom endpoints and gzip=false should not use gzip", api5.mUseGzip);
+
+        // Test constructor with all custom endpoints and gzip
+        MixpanelAPI api6 = new MixpanelAPI("events", "people", "groups", true);
+        assertTrue("Constructor with all endpoints and gzip=true should use gzip", api6.mUseGzip);
+
+        MixpanelAPI api7 = new MixpanelAPI("events", "people", "groups", false);
+        assertFalse("Constructor with all endpoints and gzip=false should not use gzip", api7.mUseGzip);
+    }
+
+    public void testGzipFunctionality() {
+        final Map<String, Boolean> gzipUsed = new HashMap<String, Boolean>();
+        final Map<String, String> receivedData = new HashMap<String, String>();
+
+        // Create a mock MixpanelAPI that tracks whether gzip was used
+        MixpanelAPI gzipApi = new MixpanelAPI("events url", "people url", "groups url", true) {
+            @Override
+            public boolean sendData(String dataString, String endpointUrl) throws IOException {
+                // For testing, we'll just record that gzip would be used
+                gzipUsed.put(endpointUrl, mUseGzip);
+                receivedData.put(endpointUrl, dataString);
+                return true;
+            }
+        };
+
+        MixpanelAPI nonGzipApi = new MixpanelAPI("events url", "people url", "groups url", false) {
+            @Override
+            public boolean sendData(String dataString, String endpointUrl) throws IOException {
+                gzipUsed.put(endpointUrl, mUseGzip);
+                receivedData.put(endpointUrl, dataString);
+                return true;
+            }
+        };
+
+        ClientDelivery delivery = new ClientDelivery();
+        JSONObject event = mBuilder.event("test id", "test event", mSampleProps);
+        delivery.addMessage(event);
+
+        try {
+            gzipApi.deliver(delivery);
+            assertTrue("Gzip API should use gzip", gzipUsed.get("events url?ip=0"));
+
+            gzipUsed.clear();
+            nonGzipApi.deliver(delivery);
+            assertFalse("Non-gzip API should not use gzip", gzipUsed.get("events url?ip=0"));
+        } catch (IOException e) {
+            fail("Unexpected IOException: " + e.getMessage());
+        }
+    }
+
 }

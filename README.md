@@ -30,15 +30,30 @@ are built by `MessageBuilder` objects, and those messages can be consumed by the
     MixpanelAPI mixpanel = new MixpanelAPI();
     mixpanel.deliver(delivery);
 
+Gzip Compression
+----------------
+The library supports optional gzip compression for requests to reduce bandwidth usage. This is especially useful when sending large volumes of analytics data.
+
+### Basic Usage with Gzip
+
+    // Enable gzip compression
+    MixpanelAPI mixpanel = new MixpanelAPI(true);
+    mixpanel.deliver(delivery);
+
+### Constructor Options
+
+    // Default constructor (no gzip)
+    MixpanelAPI mixpanel = new MixpanelAPI();
+
 Learn More
 ----------
 This library in particular has more in-depth documentation at
 
-    https://mixpanel.com/docs/integration-libraries/java
+    https://docs.mixpanel.com/docs/tracking-methods/sdks/java
     
 Mixpanel maintains documentation at
 
-    http://www.mixpanel.com/docs
+    http://docs.mixpanel.com/
 
 
 The library also contains a simple demo application, that demonstrates

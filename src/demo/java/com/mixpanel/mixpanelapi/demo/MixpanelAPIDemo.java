@@ -25,8 +25,8 @@ public class MixpanelAPIDemo {
     public static long MILLIS_TO_WAIT = 10 * 1000;
 
     private static class DeliveryThread extends Thread {
-        public DeliveryThread(Queue<JSONObject> messages) {
-            mMixpanel = new MixpanelAPI();
+        public DeliveryThread(Queue<JSONObject> messages, boolean useGzip) {
+            mMixpanel = new MixpanelAPI(useGzip);
             mMessageQueue = messages;
         }
 
@@ -65,10 +65,14 @@ public class MixpanelAPIDemo {
     }
 
     public static void printUsage() {
-        System.out.println("USAGE: java com.mixpanel.mixpanelapi.demo.MixpanelAPIDemo distinct_id");
+        System.out.println("USAGE: java com.mixpanel.mixpanelapi.demo.MixpanelAPIDemo distinct_id [gzip]");
         System.out.println("");
         System.out.println("This is a simple program demonstrating Mixpanel's Java library.");
         System.out.println("It reads lines from standard input and sends them to Mixpanel as events.");
+        System.out.println("");
+        System.out.println("Arguments:");
+        System.out.println("  distinct_id  - The distinct ID to use for all events");
+        System.out.println("  gzip        - Optional. Set to 'true' to enable gzip compression for requests");
     }
 
     /**
@@ -77,16 +81,24 @@ public class MixpanelAPIDemo {
     public static void main(String[] args)
         throws IOException, InterruptedException {
         Queue<JSONObject> messages = new ConcurrentLinkedQueue<JSONObject>();
-        DeliveryThread worker = new DeliveryThread(messages);
         MessageBuilder messageBuilder = new MessageBuilder(PROJECT_TOKEN);
 
-        if (args.length != 1) {
+        if (args.length < 1 || args.length > 2) {
             printUsage();
             System.exit(1);
         }
 
-        worker.start();
         String distinctId = args[0];
+        boolean useGzip = false;
+        
+        if (args.length == 2) {
+            useGzip = Boolean.parseBoolean(args[1]);
+        }
+        
+        System.out.println("Gzip compression: " + (useGzip ? "enabled" : "disabled"));
+
+        DeliveryThread worker = new DeliveryThread(messages, useGzip);
+        worker.start();
         BufferedReader inputLines = new BufferedReader(new InputStreamReader(System.in));
         String line = inputLines.readLine();
 

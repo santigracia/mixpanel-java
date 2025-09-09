@@ -9,6 +9,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
 import java.util.List;
+import java.util.zip.GZIPOutputStream;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -33,12 +34,21 @@ public class MixpanelAPI {
     protected final String mEventsEndpoint;
     protected final String mPeopleEndpoint;
     protected final String mGroupsEndpoint;
+    protected final boolean mUseGzip;
 
     /**
      * Constructs a MixpanelAPI object associated with the production, Mixpanel services.
      */
     public MixpanelAPI() {
-        this(Config.BASE_ENDPOINT + "/track", Config.BASE_ENDPOINT + "/engage", Config.BASE_ENDPOINT + "/groups");
+        this(false);
+    }
+
+    /**
+     * Constructs a MixpanelAPI object associated with the production, Mixpanel services.
+     * @param useGzip whether to use gzip compression for requests
+     */
+    public MixpanelAPI(boolean useGzip) {
+        this(Config.BASE_ENDPOINT + "/track", Config.BASE_ENDPOINT + "/engage", Config.BASE_ENDPOINT + "/groups", useGzip);
     }
 
     /**
@@ -51,9 +61,21 @@ public class MixpanelAPI {
      * @see #MixpanelAPI()
      */
     public MixpanelAPI(String eventsEndpoint, String peopleEndpoint) {
-        mEventsEndpoint = eventsEndpoint;
-        mPeopleEndpoint = peopleEndpoint;
-        mGroupsEndpoint = Config.BASE_ENDPOINT + "/groups";
+        this(eventsEndpoint, peopleEndpoint, Config.BASE_ENDPOINT + "/groups", false);
+    }
+
+    /**
+     * Create a MixpaneAPI associated with custom URLS for events and people updates.
+     *
+     * Useful for testing and proxying. Most callers should use the constructor with no arguments.
+     *
+     * @param eventsEndpoint a URL that will accept Mixpanel events messages
+     * @param peopleEndpoint a URL that will accept Mixpanel people messages
+     * @param useGzip whether to use gzip compression for requests
+     * @see #MixpanelAPI()
+     */
+    public MixpanelAPI(String eventsEndpoint, String peopleEndpoint, boolean useGzip) {
+        this(eventsEndpoint, peopleEndpoint, Config.BASE_ENDPOINT + "/groups", useGzip);
     }
 
     /**
@@ -67,9 +89,25 @@ public class MixpanelAPI {
      * @see #MixpanelAPI()
      */
     public MixpanelAPI(String eventsEndpoint, String peopleEndpoint, String groupsEndpoint) {
+        this(eventsEndpoint, peopleEndpoint, groupsEndpoint, false);
+    }
+
+    /**
+     * Create a MixpaneAPI associated with custom URLS for the Mixpanel service.
+     *
+     * Useful for testing and proxying. Most callers should use the constructor with no arguments.
+     *
+     * @param eventsEndpoint a URL that will accept Mixpanel events messages
+     * @param peopleEndpoint a URL that will accept Mixpanel people messages
+     * @param groupsEndpoint a URL that will accept Mixpanel groups messages
+     * @param useGzip whether to use gzip compression for requests
+     * @see #MixpanelAPI()
+     */
+    public MixpanelAPI(String eventsEndpoint, String peopleEndpoint, String groupsEndpoint, boolean useGzip) {
         mEventsEndpoint = eventsEndpoint;
         mPeopleEndpoint = peopleEndpoint;
         mGroupsEndpoint = groupsEndpoint;
+        mUseGzip = useGzip;
     }
 
     /**
@@ -159,11 +197,22 @@ public class MixpanelAPI {
 
         String encodedData = encodeDataString(dataString);
         String encodedQuery = "data=" + encodedData;
+        byte[] postData = encodedQuery.getBytes("UTF-8");
+
+        if (mUseGzip) {
+            conn.setRequestProperty("Content-Encoding", "gzip");
+        }
 
         OutputStream postStream = null;
         try {
             postStream = conn.getOutputStream();
-            postStream.write(encodedQuery.getBytes());
+            if (mUseGzip) {
+                GZIPOutputStream gzipStream = new GZIPOutputStream(postStream);
+                gzipStream.write(postData);
+                gzipStream.close();
+            } else {
+                postStream.write(postData);
+            }
         } finally {
             if (postStream != null) {
                 try {
