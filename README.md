@@ -32,15 +32,12 @@ are built by `MessageBuilder` objects, and those messages can be consumed by the
 
 ### Optional Gzip Compression
 
-The library supports optional gzip compression to reduce bandwidth usage when sending large volumes of data:
+The library supports optional gzip compression to reduce bandwidth usage when sending large volumes of event data. Note gzip compression is only applied to event tracking.
 
     // Enable gzip compression
     MixpanelAPI mixpanel = new MixpanelAPI(true);
     
-    // Or with custom endpoints
-    MixpanelAPI mixpanel = new MixpanelAPI("https://custom.endpoint/track", 
-                                           "https://custom.endpoint/engage", 
-                                           true);
+
 
 Learn More
 ----------

@@ -199,14 +199,16 @@ public class MixpanelAPI {
         String encodedQuery = "data=" + encodedData;
         byte[] postData = encodedQuery.getBytes("UTF-8");
 
-        if (mUseGzip) {
+        // Only apply gzip compression to events endpoint (/track), as /engage and /groups don't support it
+        boolean shouldUseGzip = mUseGzip && endpointUrl.contains(mEventsEndpoint.split("\\?")[0]);
+        if (shouldUseGzip) {
             conn.setRequestProperty("Content-Encoding", "gzip");
         }
 
         OutputStream postStream = null;
         try {
             postStream = conn.getOutputStream();
-            if (mUseGzip) {
+            if (shouldUseGzip) {
                 GZIPOutputStream gzipStream = new GZIPOutputStream(postStream);
                 gzipStream.write(postData);
                 gzipStream.close();

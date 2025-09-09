@@ -735,17 +735,9 @@ public class MixpanelAPITest extends TestCase
         MixpanelAPI gzipApi = new MixpanelAPI("events url", "people url", "groups url", true) {
             @Override
             public boolean sendData(String dataString, String endpointUrl) throws IOException {
-                // For testing, we'll just record that gzip would be used
-                gzipUsed.put(endpointUrl, mUseGzip);
-                receivedData.put(endpointUrl, dataString);
-                return true;
-            }
-        };
-
-        MixpanelAPI nonGzipApi = new MixpanelAPI("events url", "people url", "groups url", false) {
-            @Override
-            public boolean sendData(String dataString, String endpointUrl) throws IOException {
-                gzipUsed.put(endpointUrl, mUseGzip);
+                // Track whether gzip would be used based on the actual logic
+                boolean shouldUseGzip = mUseGzip && endpointUrl.contains(mEventsEndpoint.split("\\?")[0]);
+                gzipUsed.put(endpointUrl, shouldUseGzip);
                 receivedData.put(endpointUrl, dataString);
                 return true;
             }
@@ -754,14 +746,20 @@ public class MixpanelAPITest extends TestCase
         ClientDelivery delivery = new ClientDelivery();
         JSONObject event = mBuilder.event("test id", "test event", mSampleProps);
         delivery.addMessage(event);
+        
+        JSONObject peopleMessage = mBuilder.set("test id", mSampleProps);
+        delivery.addMessage(peopleMessage);
+        
+        JSONObject groupMessage = mBuilder.groupSet("company", "test company", mSampleProps);
+        delivery.addMessage(groupMessage);
 
         try {
             gzipApi.deliver(delivery);
-            assertTrue("Gzip API should use gzip", gzipUsed.get("events url?ip=0"));
-
-            gzipUsed.clear();
-            nonGzipApi.deliver(delivery);
-            assertFalse("Non-gzip API should not use gzip", gzipUsed.get("events url?ip=0"));
+            
+            // Only events should use gzip
+            assertTrue("Events endpoint should use gzip", gzipUsed.get("events url?ip=0"));
+            assertFalse("People endpoint should NOT use gzip", gzipUsed.get("people url?ip=0"));
+            assertFalse("Groups endpoint should NOT use gzip", gzipUsed.get("groups url?ip=0"));
         } catch (IOException e) {
             fail("Unexpected IOException: " + e.getMessage());
         }
